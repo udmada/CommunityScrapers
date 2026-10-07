@@ -144,6 +144,26 @@ NO_SITE_OF_THEIR_OWN = {
 }
 
 
+# Sites whose releases are all credited to one director. The CMS has no director
+# field, so these come from the studios' own DVD credits (via IAFD).
+STUDIO_DIRECTORS = {
+    "joeschmoevideos.com": "Joe Schmoe",
+}
+
+# The CMS uses its own vocabulary for these two. Stash's own convention - what it
+# writes when importing from a stash-box, and what its dropdowns offer - differs,
+# so translate the values we know about and pass anything else through unchanged.
+ETHNICITY_MAP = {
+    "White": "Caucasian",
+}
+
+HAIR_COLOR_MAP = {
+    "Blond": "Blonde",
+    "Brown": "Brunette",
+    "Shaved": "Bald",
+}
+
+
 def feetinches_to_cm(feet, inches):
     return str(round((float(feet) * 12 + float(inches)) * 2.54))
 
@@ -325,7 +345,7 @@ def to_scraped_performer(raw_performer: dict, page_url: str) -> ScrapedPerformer
         performer["eye_color"] = eye_color
 
     if ethnicity := dig(raw_performer, ("ethnicity", "race")):
-        performer["ethnicity"] = ethnicity
+        performer["ethnicity"] = ETHNICITY_MAP.get(ethnicity, ethnicity)
 
     # Some sites entity-encode the feet/inch marks: 5&#039;8&quot;
     height = html.unescape(raw_performer.get("height") or "")
@@ -371,7 +391,7 @@ def to_scraped_performer(raw_performer: dict, page_url: str) -> ScrapedPerformer
         performer["circumcised"] = circumcised.capitalize()
 
     if hair_color := raw_performer.get("hair"):
-        performer["hair_color"] = hair_color
+        performer["hair_color"] = HAIR_COLOR_MAP.get(hair_color, hair_color)
 
     if country := raw_performer.get("born"):
         performer["country"] = guess_nationality(country)
@@ -446,6 +466,8 @@ def to_scraped_scene_from_content(raw_scene: dict, page_url: str) -> ScrapedScen
         scene["tags"] = [{"name": x} for x in tags]
 
     scene["studio"] = get_studio(site, page_url)
+    if director := STUDIO_DIRECTORS.get(site):
+        scene["director"] = director
     # PurgatoryX splits its catalogue into "Heaven" and "Hell" series, tagged
     # as such; StashDB models them as child studios of PurgatoryX
     if site == "purgatoryx.com" and (

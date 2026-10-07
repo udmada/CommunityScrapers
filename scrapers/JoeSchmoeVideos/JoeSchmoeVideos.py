@@ -13,6 +13,10 @@ from py_common.util import scraper_args
 BASE_URL = "https://joeschmoevideos.com"
 STUDIO = {"name": "Joe Schmoe Videos", "urls": [BASE_URL]}
 
+# The site does not publish a director field, but IAFD credits "Joe Schmoe" as
+# director on every one of this studio's releases, so it is set unconditionally.
+DIRECTOR = "Joe Schmoe"
+
 # The site is a Next.js app: every page embeds the data it renders as JSON.
 # Parsing that is far more reliable than scraping the DOM. The /_next/data/
 # endpoint is deliberately avoided because its URL contains a build id that
@@ -84,7 +88,7 @@ def _date(scene: dict[str, Any]) -> str | None:
 
 
 def to_scraped_scene(scene: dict[str, Any]) -> ScrapedScene:
-    scraped: ScrapedScene = {"studio": STUDIO}
+    scraped: ScrapedScene = {"studio": STUDIO, "director": DIRECTOR}
 
     if title := scene.get("title"):
         scraped["title"] = title

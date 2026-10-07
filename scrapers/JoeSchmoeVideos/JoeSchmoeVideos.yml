@@ -26,5 +26,25 @@ sceneByFragment:
     - python
     - JoeSchmoeVideos.py
     - scene-by-fragment
+performerByURL:
+  - action: script
+    url:
+      - joeschmoevideos.com/models/
+    script:
+      - python
+      - JoeSchmoeVideos.py
+      - performer-by-url
+performerByName:
+  action: script
+  script:
+    - python
+    - JoeSchmoeVideos.py
+    - performer-by-name
+performerByFragment:
+  action: script
+  script:
+    - python
+    - JoeSchmoeVideos.py
+    - performer-by-fragment
 
 # Last Updated October 07, 2026

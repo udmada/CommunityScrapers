@@ -7,7 +7,7 @@ from typing import Any
 import requests
 
 from py_common import log
-from py_common.types import ScrapedScene
+from py_common.types import ScrapedPerformer, ScrapedScene
 from py_common.util import scraper_args
 
 BASE_URL = "https://joeschmoevideos.com"
@@ -141,6 +141,46 @@ def scene_by_name(name: str) -> list[ScrapedScene]:
     return [to_scraped_scene(scene) for scene in results]
 
 
+def to_scraped_performer(model: dict[str, Any]) -> ScrapedPerformer:
+    performer: ScrapedPerformer = {"gender": "MALE"}
+
+    if name := model.get("name"):
+        performer["name"] = name
+    if slug := model.get("slug"):
+        performer["urls"] = [f"{BASE_URL}/models/{slug}"]
+    # The bio field is capitalised in the site's payload
+    if details := model.get("Bio") or model.get("details"):
+        performer["details"] = details
+    if image := _absolute(model.get("thumbnail")):
+        performer["images"] = [image]
+
+    return performer
+
+
+def performer_by_url(url: str) -> ScrapedPerformer | None:
+    if not (match := re.search(r"/models/([^/?#]+)", url)):
+        log.error(f"Not a Joe Schmoe Videos model URL: {url}")
+        return None
+
+    if not (props := _next_data(f"/models/{match.group(1)}")):
+        return None
+    if not (model := props.get("model")):
+        log.error(f"No model data on {url}")
+        return None
+
+    return to_scraped_performer(model)
+
+
+def performer_by_name(name: str) -> list[ScrapedPerformer]:
+    if not (props := _next_data("/models", {"search": name})):
+        return []
+
+    results = (props.get("models") or {}).get("data") or []
+    if not results:
+        log.debug(f"No performers matching '{name}'")
+    return [to_scraped_performer(model) for model in results]
+
+
 if __name__ == "__main__":
     op, args = scraper_args()
     result = None
@@ -155,6 +195,16 @@ if __name__ == "__main__":
                 result = scene_by_url(url)
             elif title := args.get("title"):
                 matches = scene_by_name(title)
+                result = matches[0] if matches else None
+        case "performer-by-url", {"url": url} if url:
+            result = performer_by_url(url)
+        case "performer-by-name", {"name": name} if name:
+            result = performer_by_name(name)
+        case "performer-by-fragment", args:
+            if url := args.get("url"):
+                result = performer_by_url(url)
+            elif name := args.get("name"):
+                matches = performer_by_name(name)
                 result = matches[0] if matches else None
         case _:
             log.error(f"Operation: {op}, arguments: {json.dumps(args)}")

@@ -1,3 +1,4 @@
+import html
 import json
 import re
 import sys
@@ -52,6 +53,11 @@ def _next_data(path: str, params: dict[str, Any] | None = None) -> dict[str, Any
         return None
 
 
+def _text(value: str | None) -> str | None:
+    """Model bios arrive HTML-escaped (&#039;, &quot;)."""
+    return html.unescape(value) if value else value
+
+
 def _absolute(url: str | None) -> str | None:
     """Image URLs come back protocol-relative (//cdn.example/...)."""
     if not url:
@@ -91,13 +97,13 @@ def to_scraped_scene(scene: dict[str, Any]) -> ScrapedScene:
     scraped: ScrapedScene = {"studio": STUDIO, "director": DIRECTOR}
 
     if title := scene.get("title"):
-        scraped["title"] = title
+        scraped["title"] = _text(title)
     if slug := scene.get("slug"):
         scraped["urls"] = [f"{BASE_URL}/scenes/{slug}"]
     if date := _date(scene):
         scraped["date"] = date
     if description := scene.get("description"):
-        scraped["details"] = description
+        scraped["details"] = _text(description)
     if code := scene.get("scene_code"):
         scraped["code"] = code
     if image := _image(scene):
@@ -105,12 +111,12 @@ def to_scraped_scene(scene: dict[str, Any]) -> ScrapedScene:
     # models_slugs is richer than models, but either may be present
     if models := scene.get("models_slugs"):
         scraped["performers"] = [
-            {"name": m["name"], "urls": [f"{BASE_URL}/models/{m['slug']}"]}
+            {"name": _text(m["name"]), "urls": [f"{BASE_URL}/models/{m['slug']}"]}
             for m in models
             if m.get("name")
         ]
     elif models := scene.get("models"):
-        scraped["performers"] = [{"name": name} for name in models if name]
+        scraped["performers"] = [{"name": _text(name)} for name in models if name]
     if tags := scene.get("tags"):
         scraped["tags"] = [{"name": tag} for tag in tags if tag]
 
@@ -145,12 +151,12 @@ def to_scraped_performer(model: dict[str, Any]) -> ScrapedPerformer:
     performer: ScrapedPerformer = {"gender": "MALE"}
 
     if name := model.get("name"):
-        performer["name"] = name
+        performer["name"] = _text(name)
     if slug := model.get("slug"):
         performer["urls"] = [f"{BASE_URL}/models/{slug}"]
     # The bio field is capitalised in the site's payload
     if details := model.get("Bio") or model.get("details"):
-        performer["details"] = details
+        performer["details"] = _text(details)
     if image := _absolute(model.get("thumbnail")):
         performer["images"] = [image]
 
